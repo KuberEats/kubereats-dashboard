@@ -38,10 +38,3 @@ jobs:
 
       - name: Run repository validation script
         run: make validate
-
-      - name: promtool check (Prometheus config and rules)
-        run: |
-          docker run --rm -v "${GITHUB_WORKSPACE}/prometheus:/etc/prometheus:ro" \
-            prom/prometheus:v2.55.1 promtool check config /etc/prometheus/prometheus.yml
-          docker run --rm -v "${GITHUB_WORKSPACE}/prometheus:/etc/prometheus:ro" \
-            prom/prometheus:v2.55.1 promtool check rules /etc/prometheus/rules/postgres-alerts.yml

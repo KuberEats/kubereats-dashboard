@@ -31,14 +31,30 @@ python3 -m json.tool grafana/dashboards/kubereats-postgres-overview.json >/dev/n
 python3 -m json.tool grafana/dashboards/kubereats-postgres-ha.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-backup-gcs.json >/dev/null
 
-if command -v promtool >/dev/null 2>&1; then
+PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}"
+PROMETHEUS_VOLUME="$(pwd)/prometheus:/etc/prometheus:ro"
+
+run_promtool() {
   promtool check config prometheus/prometheus.yml
   promtool check rules prometheus/rules/postgres-alerts.yml
+}
+
+run_promtool_docker() {
+  docker run --rm --entrypoint promtool -v "${PROMETHEUS_VOLUME}" "${PROMETHEUS_IMAGE}" \
+    check config /etc/prometheus/prometheus.yml
+  docker run --rm --entrypoint promtool -v "${PROMETHEUS_VOLUME}" "${PROMETHEUS_IMAGE}" \
+    check rules /etc/prometheus/rules/postgres-alerts.yml
+}
+
+if command -v promtool >/dev/null 2>&1; then
+  run_promtool
+elif command -v docker >/dev/null 2>&1; then
+  run_promtool_docker
 else
   echo "promtool not found; JSON dashboards validated."
   echo "To validate Prometheus config with Docker:"
-  echo "  docker run --rm -v \"\$(pwd)/prometheus:/etc/prometheus:ro\" prom/prometheus:v2.55.1 promtool check config /etc/prometheus/prometheus.yml"
-  echo "  docker run --rm -v \"\$(pwd)/prometheus:/etc/prometheus:ro\" prom/prometheus:v2.55.1 promtool check rules /etc/prometheus/rules/postgres-alerts.yml"
+  echo "  docker run --rm --entrypoint promtool -v \"\$(pwd)/prometheus:/etc/prometheus:ro\" ${PROMETHEUS_IMAGE} check config /etc/prometheus/prometheus.yml"
+  echo "  docker run --rm --entrypoint promtool -v \"\$(pwd)/prometheus:/etc/prometheus:ro\" ${PROMETHEUS_IMAGE} check rules /etc/prometheus/rules/postgres-alerts.yml"
 fi
 
 echo "validation complete"
