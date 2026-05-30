@@ -4,20 +4,36 @@ This repository currently focuses on database monitoring only. Kubereats depends
 
 Backend service health checks, application metrics, tracing, frontend telemetry, and log aggregation are future work. Keeping this first stack database-only makes it useful before backend services expose `/metrics`.
 
+The primary monitoring stack is designed to run outside the Kubernetes application cluster, preferably on an independent GCP VM named `gcp-monitor-01`. This keeps the monitoring plane out of the application cluster failure domain and separate from the PostgreSQL nodes it observes.
+
 ## Architecture
 
 ```mermaid
 flowchart LR
-  DB[(PostgreSQL HA nodes)] --> PE[postgres_exporter]
-  DB --> PAT[Patroni /metrics optional]
-  VM[DB VM OS] --> NE[node_exporter optional]
-  GCS[(GCS backup bucket)] --> GBE[gcs-backup-exporter]
+  subgraph MON[gcp-monitor-01]
+    PROM[Prometheus]
+    GRAF[Grafana]
+    AM[Alertmanager]
+    GBE[gcs-backup-exporter]
+  end
+  subgraph ONPREM[On-prem or private network]
+    DB[(PostgreSQL HA nodes)]
+    PE[postgres_exporter]
+    PAT[Patroni /metrics optional]
+    NE[node_exporter optional]
+  end
+  GCPDB[(GCP PostgreSQL node private IP)] --> PROM
+  DB --> PE
+  DB --> PAT
+  DB --> NE
   PE --> PROM[Prometheus]
   PAT --> PROM
   NE --> PROM
+  GCS[(GCS backup bucket)] --> GBE
   GBE --> PROM
   PROM --> GRAF[Grafana]
   PROM --> AM[Alertmanager]
+  GCM[Google Cloud Monitoring later] -. uptime checks .-> MON
 ```
 
 ## Components
@@ -29,6 +45,34 @@ flowchart LR
 - `gcs-backup-exporter` checks the configured GCS bucket and prefix for the latest backup object.
 - Grafana provisions the Prometheus datasource and dashboard JSON files automatically.
 - Alertmanager is wired as the alert receiver, with notification routes left as a deployment-specific task.
+
+The stack supports scraping PostgreSQL nodes over private network or VPN, scraping GCP-hosted PostgreSQL nodes by private IP, checking GCS backup freshness, and later integrating Google Cloud Monitoring for GCS, GCE, and uptime checks.
+
+## Failure Domain Design
+
+The primary Prometheus, Grafana, Alertmanager, and backup freshness exporter should run on `gcp-monitor-01`, outside the Kubernetes application cluster. This is intentional: if the Kubernetes cluster fails, the monitoring plane should still be able to show database state, backup freshness, and external node availability.
+
+If the on-prem site fails, Prometheus on `gcp-monitor-01` should continue running and should show scrape failures, PostgreSQL unreachability, replication impact, or site-level alerts depending on which targets are unreachable. Alertmanager grouping by `cluster` and `site` helps collapse many related symptoms into a smaller incident view.
+
+If Kubernetes fails, this database monitoring stack should remain available because it is not deployed inside the application cluster. Operators should still be able to open Grafana on `gcp-monitor-01`, inspect PostgreSQL status, and decide whether the database is healthy while application workloads are unavailable.
+
+If the monitoring VM fails, Prometheus and Grafana from this stack are unavailable until the VM is recovered or restored. This is the main accepted risk in the first phase. Keep the VM simple, document restore steps, and back up configuration through Git. A later phase can add a standby monitoring VM or remote metric storage.
+
+Google Cloud Monitoring uptime checks can monitor the monitoring VM itself from outside the VM. Recommended checks include Prometheus `/-/ready` on port `9090`, Grafana `/api/health` on port `3000`, and Alertmanager `/-/ready` on port `9093`, exposed only through approved firewall rules or an internal load balancer as appropriate. Google Cloud Monitoring can also cover GCE VM uptime, disk, GCS bucket-level signals, and synthetic checks that are outside Prometheus' own failure domain.
+
+## False Positive Reduction
+
+Alerts use `warning`, `critical`, and occasional `info` severities. Warnings indicate conditions that need investigation before they become outages. Critical alerts indicate likely user-impacting database availability, backup freshness, or HA failures.
+
+Most alerts use a `for:` duration so short scrape glitches do not page immediately. Examples include 5 minutes for exporter scrape failures, 10 minutes for high connection usage, and 10 minutes for stale GCS backup state.
+
+Alertmanager groups alerts by `alertname`, `cluster`, `site`, and `node`. The `site` label should be added to file service discovery targets when a deployment has on-prem and GCP sites, for example `site: onprem-tpe` or `site: gcp-asia-east1`. Grouping by site makes network partitions and site failures easier to read.
+
+Inhibition rules are prepared for a future site-level alert named `KubereatsSiteUnreachable`. When that critical alert is firing for a `cluster` and `site`, lower-severity warning and info alerts from the same site can be inhibited to avoid alert storms. The site-level alert itself should come from blackbox probing, VPN tunnel checks, or Google Cloud Monitoring integration in a later phase.
+
+Use Alertmanager silences for planned maintenance such as PostgreSQL failover drills, VM patching, backup tooling upgrades, or VPN maintenance. Prefer time-bounded silences scoped by `cluster`, `site`, `node`, or exact alert names.
+
+Default thresholds are conservative. They are intended to avoid noisy alerts in a student cloud-native project while still catching important database risks: sustained exporter failure, PostgreSQL down, connection pressure above 80 percent, replication lag above 64 MiB, disk usage above 85 percent, and backup age above 26 hours.
 
 ## PostgreSQL Exporter User
 
@@ -161,17 +205,19 @@ The exporter process is running but its latest GCS check failed. Check ADC crede
 - Alertmanager notification receivers are intentionally placeholders.
 - The local stack does not create PostgreSQL or Patroni nodes.
 
-## Kubernetes-Ready Path
+## Kubernetes Monitoring Later
 
-A later Kubernetes deployment should use:
+Do not deploy the primary database Prometheus/Grafana stack inside Kubernetes in this phase. Database monitoring should remain available even when the Kubernetes application cluster is unavailable.
+
+A later Kubernetes monitoring add-on may use:
 
 - `kube-prometheus-stack`
-- `ServiceMonitor` for in-cluster exporters
-- `additionalScrapeConfigs` for external DB VMs
-- Grafana dashboard ConfigMaps generated from `grafana/dashboards`
+- `ServiceMonitor` for in-cluster application and Kubernetes exporters
+- separate `additionalScrapeConfigs` if Kubernetes Prometheus needs a limited view of external dependencies
+- Grafana dashboard ConfigMaps for Kubernetes and application dashboards
 - Kubernetes Secrets, External Secrets, or Workload Identity for credentials
 
-Do not store GCP service account keys in Git. Prefer Workload Identity on GKE when possible.
+That future in-cluster stack should complement `gcp-monitor-01`, not replace it for database monitoring. Do not store GCP service account keys in Git. Prefer Workload Identity on GKE when possible.
 
 ## Future Work
 
