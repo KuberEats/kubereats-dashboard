@@ -1,0 +1,47 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install exporter dependencies
+        run: pip install -r exporters/gcs-backup-exporter/requirements.txt
+
+      - name: Compile GCS backup exporter
+        run: python3 -m py_compile exporters/gcs-backup-exporter/exporter.py
+
+      - name: Parse YAML configs
+        run: |
+          pip install pyyaml
+          python3 - <<'PY'
+          import pathlib
+          import yaml
+
+          for path in sorted(pathlib.Path(".").rglob("*.yml")):
+              if ".github" in path.parts:
+                  continue
+              with path.open() as handle:
+                  yaml.safe_load(handle)
+          print("YAML OK")
+          PY
+
+      - name: Run repository validation script
+        run: make validate
+
+      - name: promtool check (Prometheus config and rules)
+        run: |
+          docker run --rm -v "${GITHUB_WORKSPACE}/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v2.55.1 promtool check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "${GITHUB_WORKSPACE}/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v2.55.1 promtool check rules /etc/prometheus/rules/postgres-alerts.yml
