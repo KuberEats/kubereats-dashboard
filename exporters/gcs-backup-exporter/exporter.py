@@ -16,6 +16,7 @@ LOGGER = logging.getLogger("gcs-backup-exporter")
 PORT = int(os.getenv("PORT", "9817"))
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
 GCS_REQUEST_TIMEOUT_SECONDS = int(os.getenv("GCS_REQUEST_TIMEOUT_SECONDS", "10"))
+CHECK_TIMEOUT_SECONDS = int(os.getenv("CHECK_TIMEOUT_SECONDS", "20"))
 
 
 @dataclass(frozen=True)
@@ -142,9 +143,32 @@ class Handler(BaseHTTPRequestHandler):
         LOGGER.info("%s - %s", self.address_string(), format % args)
 
 
+def check_with_timeout(checker: BackupChecker) -> None:
+    import threading
+
+    done = threading.Event()
+
+    def target() -> None:
+        try:
+            checker.check_once()
+        finally:
+            done.set()
+
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    thread.join(CHECK_TIMEOUT_SECONDS)
+    if not done.is_set():
+        LOGGER.error(
+            "GCS backup freshness check timed out after %s seconds",
+            CHECK_TIMEOUT_SECONDS,
+        )
+        max_age.labels(**checker.labels).set(checker.config.max_age_seconds)
+        last_check_success.labels(**checker.labels).set(0)
+
+
 def run_loop(checker: BackupChecker) -> None:
     while True:
-        checker.check_once()
+        check_with_timeout(checker)
         time.sleep(CHECK_INTERVAL_SECONDS)
 
 
