@@ -15,6 +15,7 @@ from prometheus_client.core import REGISTRY
 LOGGER = logging.getLogger("gcs-backup-exporter")
 PORT = int(os.getenv("PORT", "9817"))
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
+GCS_REQUEST_TIMEOUT_SECONDS = int(os.getenv("GCS_REQUEST_TIMEOUT_SECONDS", "10"))
 
 
 @dataclass(frozen=True)
@@ -110,7 +111,11 @@ class BackupChecker:
     def _list_blobs(self) -> Iterable[storage.Blob]:
         if self.client is None:
             self.client = storage.Client()
-        return self.client.list_blobs(self.config.bucket, prefix=self.config.prefix)
+        return self.client.list_blobs(
+            self.config.bucket,
+            prefix=self.config.prefix,
+            timeout=GCS_REQUEST_TIMEOUT_SECONDS,
+        )
 
 
 class Handler(BaseHTTPRequestHandler):
