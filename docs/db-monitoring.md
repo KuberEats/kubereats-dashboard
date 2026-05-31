@@ -146,6 +146,8 @@ GRANT pg_monitor TO postgres_exporter;
 
 For the current IaC role, `prometheus-postgres-exporter` is installed on DB nodes only when `monitoring_enabled` is true. Confirm the role is using a safe credential before enabling it broadly.
 
+As of the initial exporter rollout, `postgres_exporter` is installed as a systemd service on `pg1`, `pg2`, and `pg3`. Its DSN is stored only on each DB node in `/etc/postgres_exporter/postgres_exporter.env`, owned by root with mode `0600`. TCP/9187 should be restricted to the monitoring VM and the Kubernetes internal scrape path, matching the node_exporter restriction pattern.
+
 ## Dashboards
 
 The provisioned dashboards are intentionally small:

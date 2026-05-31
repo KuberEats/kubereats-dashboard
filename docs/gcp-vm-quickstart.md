@@ -118,6 +118,6 @@ Exporter ports:
 - postgres_exporter: `9187`
 - Patroni: `8008`
 
-`node_exporter` is installed on `pg1`, `pg2`, and `pg3`. Restrict TCP/9100 to the monitoring VM source IP `10.250.0.4`; do not allow exporter ports from `0.0.0.0/0`. `postgres_exporter` requires a low-privilege PostgreSQL monitoring user and a host-local systemd environment file; do not store its DSN or password in Git.
+`node_exporter` and `postgres_exporter` are installed on `pg1`, `pg2`, and `pg3`. Restrict TCP/9100 and TCP/9187 to the monitoring VM source IP `10.250.0.4` and any explicitly required Kubernetes internal scrape ranges; do not allow exporter ports from `0.0.0.0/0`. `postgres_exporter` uses a low-privilege PostgreSQL monitoring user and a host-local systemd environment file; do not store its DSN or password in Git.
 
 If central Prometheus cannot directly scrape `pg3`, it also federates selected `pg3` metrics from the Kubernetes-local Prometheus through private NodePort `30990` on `192.168.17.11`. This is an internal fallback path only; keep the NodePort private to the lab networks.
