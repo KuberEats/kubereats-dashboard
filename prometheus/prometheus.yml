@@ -114,7 +114,7 @@ scrape_configs:
     metrics_path: /federate
     params:
       'match[]':
-        - '{job=~"patroni|db-node-exporter",node="pg3"}'
+        - '{job=~"patroni|db-node-exporter|postgres-exporter",node="pg3"}'
     metric_relabel_configs:
       - target_label: source
         replacement: k8s-local
