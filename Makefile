@@ -3,7 +3,7 @@
 COMPOSE_FILE=deploy/gcp-vm/docker-compose.yml
 
 up:
-	docker compose --env-file .env -f $(COMPOSE_FILE) up -d --build
+	docker compose --env-file .env -f $(COMPOSE_FILE) up -d
 
 down:
 	docker compose --env-file .env -f $(COMPOSE_FILE) down

@@ -66,6 +66,7 @@ services:
       - prometheus
 
   gcs-backup-exporter:
+    image: kubereats/gcs-backup-exporter:local
     build:
       context: ../../exporters/gcs-backup-exporter
     restart: unless-stopped
