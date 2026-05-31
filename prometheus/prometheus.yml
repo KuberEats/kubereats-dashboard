@@ -20,43 +20,91 @@ scrape_configs:
       - targets:
           - prometheus:9090
         labels:
+          env: dev
+          cluster: kubereats-postgres
           component: prometheus
           node: local
 
   - job_name: postgres-exporter
     static_configs:
       - targets:
-          - postgres-exporter-pg-a:9187
+          - 10.250.0.11:9187
         labels:
+          env: dev
+          cluster: kubereats-postgres
           component: postgres
-          node: pg-a
+          node: pg1
       - targets:
-          - postgres-exporter-pg-b:9187
+          - 10.250.0.12:9187
         labels:
+          env: dev
+          cluster: kubereats-postgres
           component: postgres
-          node: pg-b
+          node: pg2
       - targets:
-          - postgres-exporter-pg-c:9187
+          - 10.250.0.13:9187
         labels:
+          env: dev
+          cluster: kubereats-postgres
           component: postgres
-          node: pg-c
+          node: pg3
 
   - job_name: patroni
     metrics_path: /metrics
-    file_sd_configs:
-      - files:
-          - file_sd/patroni.yml
+    static_configs:
+      - targets:
+          - 10.250.0.11:8008
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: patroni
+          node: pg1
+      - targets:
+          - 10.250.0.12:8008
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: patroni
+          node: pg2
+      - targets:
+          - 10.250.0.13:8008
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: patroni
+          node: pg3
 
   - job_name: db-node-exporter
     metrics_path: /metrics
-    file_sd_configs:
-      - files:
-          - file_sd/db-node-exporter.yml
+    static_configs:
+      - targets:
+          - 10.250.0.11:9100
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: db-node
+          node: pg1
+      - targets:
+          - 10.250.0.12:9100
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: db-node
+          node: pg2
+      - targets:
+          - 10.250.0.13:9100
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: db-node
+          node: pg3
 
   - job_name: gcs-backup-exporter
     static_configs:
       - targets:
           - gcs-backup-exporter:9817
         labels:
+          env: dev
+          cluster: kubereats-postgres
           component: backup
           node: gcs-backup-exporter

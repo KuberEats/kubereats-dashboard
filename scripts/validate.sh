@@ -5,7 +5,7 @@ required_files=(
   README.md
   Makefile
   .env.example
-  deploy/local/docker-compose.yml
+  deploy/gcp-vm/docker-compose.yml
   prometheus/prometheus.yml
   prometheus/rules/postgres-alerts.yml
   alertmanager/alertmanager.yml
@@ -18,6 +18,7 @@ required_files=(
   exporters/gcs-backup-exporter/Dockerfile
   exporters/gcs-backup-exporter/requirements.txt
   docs/db-monitoring.md
+  docs/gcp-vm-quickstart.md
 )
 
 for file in "${required_files[@]}"; do

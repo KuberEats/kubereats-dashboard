@@ -1,0 +1,84 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        cp /etc/prometheus/prometheus.yml /tmp/prometheus.yml
+        sed -i \
+          -e "s|10.250.0.11:9187|${PG_NODE_1_EXPORTER_TARGET:-10.250.0.11:9187}|g" \
+          -e "s|10.250.0.12:9187|${PG_NODE_2_EXPORTER_TARGET:-10.250.0.12:9187}|g" \
+          -e "s|10.250.0.13:9187|${PG_NODE_3_EXPORTER_TARGET:-10.250.0.13:9187}|g" \
+          -e "s|10.250.0.11:8008|${PATRONI_NODE_1_TARGET:-10.250.0.11:8008}|g" \
+          -e "s|10.250.0.12:8008|${PATRONI_NODE_2_TARGET:-10.250.0.12:8008}|g" \
+          -e "s|10.250.0.13:8008|${PATRONI_NODE_3_TARGET:-10.250.0.13:8008}|g" \
+          -e "s|10.250.0.11:9100|${DB_NODE_1_EXPORTER_TARGET:-10.250.0.11:9100}|g" \
+          -e "s|10.250.0.12:9100|${DB_NODE_2_EXPORTER_TARGET:-10.250.0.12:9100}|g" \
+          -e "s|10.250.0.13:9100|${DB_NODE_3_EXPORTER_TARGET:-10.250.0.13:9100}|g" \
+          -e "s|node: pg1|node: ${PG_NODE_1_NAME:-pg1}|g" \
+          -e "s|node: pg2|node: ${PG_NODE_2_NAME:-pg2}|g" \
+          -e "s|node: pg3|node: ${PG_NODE_3_NAME:-pg3}|g" \
+          /tmp/prometheus.yml
+        exec /bin/prometheus \
+          --config.file=/tmp/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ../../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      - alertmanager
+      - gcs-backup-exporter
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ../../alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-CHANGE_ME}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../../grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  gcs-backup-exporter:
+    build:
+      context: ../../exporters/gcs-backup-exporter
+    restart: unless-stopped
+    environment:
+      KUBEREATS_ENV: ${KUBEREATS_ENV:-dev}
+      KUBEREATS_DB_CLUSTER: ${KUBEREATS_DB_CLUSTER:-kubereats-postgres}
+      GCS_BACKUP_BUCKET: ${GCS_BACKUP_BUCKET:-}
+      GCS_BACKUP_PREFIX: ${GCS_BACKUP_PREFIX:-pgbackrest/}
+      GCS_BACKUP_MAX_AGE_HOURS: ${GCS_BACKUP_MAX_AGE_HOURS:-26}
+    ports:
+      - "127.0.0.1:9817:9817"
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:

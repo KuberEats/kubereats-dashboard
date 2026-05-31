@@ -1,59 +1,93 @@
 # Kubereats Dashboard
 
-Monitoring-as-code for the Kubereats cloud-native food ordering system.
+Monitoring-as-code for Kubereats database observability.
 
-This first version focuses only on PostgreSQL database observability:
+This repository is the source of truth for the first production-like monitoring stack on the GCP monitoring VM at `10.250.0.4`. The phase-1 stack runs outside Kubernetes and focuses on database signals: PostgreSQL exporter metrics, Patroni availability, DB node exporter metrics, GCS backup freshness, Prometheus alerting, and Grafana dashboards.
 
-- Prometheus metrics collection
-- Grafana dashboards provisioned from JSON
-- Alertmanager-ready Prometheus rules
-- `postgres_exporter` for PostgreSQL metrics
-- optional Patroni and DB VM node exporter scrapes
-- lightweight GCS backup freshness exporter
-
-Backend service health checks, application `/metrics`, tracing, logging stacks, and frontend monitoring are intentionally out of scope for this version.
+Backend application `/healthz`, backend `/metrics`, Kubernetes monitoring, tracing, and log aggregation are intentionally not included yet.
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
+vim .env
+make validate
 make up
+make ps
 ```
 
-Open:
+Open these from the monitoring VM or through an SSH tunnel:
 
 - Grafana: http://localhost:3000
 - Prometheus: http://localhost:9090
 - Alertmanager: http://localhost:9093
 
-Default local Grafana credentials come from `.env`. The example uses `admin` / `admin`; change them before sharing the stack.
+Grafana credentials come from `.env`. Change `GRAFANA_ADMIN_PASSWORD` before using the stack beyond a throwaway lab.
+
+## GCP VM Deployment
+
+The VM deployment uses `deploy/gcp-vm/docker-compose.yml`. Prometheus, Grafana, Alertmanager, and the GCS backup exporter bind to localhost by default:
+
+```text
+127.0.0.1:3000
+127.0.0.1:9090
+127.0.0.1:9093
+127.0.0.1:9817
+```
+
+Use an SSH tunnel instead of public `0.0.0.0` exposure:
+
+```bash
+ssh -J <jump-host-user>@<jump-host-public-ip> <monitor-user>@10.250.0.4 \
+  -L 3000:127.0.0.1:3000 \
+  -L 9090:127.0.0.1:9090 \
+  -L 9093:127.0.0.1:9093
+```
+
+Then open Grafana, Prometheus, and Alertmanager on localhost.
 
 ## Configuration
 
-Edit `.env` before using real infrastructure values:
+`.env.example` contains placeholders only. Copy it to `.env` on the monitoring VM and fill runtime values there. Do not commit `.env`, database passwords, service account keys, or generated secrets.
 
-- `PG_NODE_*_DSN`: PostgreSQL exporter connection strings
-- `GCS_BACKUP_BUCKET` and `GCS_BACKUP_PREFIX`: backup location to check
-- `GOOGLE_APPLICATION_CREDENTIALS`: path inside the exporter container when mounting credentials locally
+Known lab DB nodes from `/home/edtsai/kubereats-IaC` are:
 
-Do not commit real passwords, service account JSON files, private IPs, or production hostnames.
+- `pg1`: `192.168.16.221`
+- `pg2`: `192.168.16.222`
+- `pg3`: `10.250.0.3`
 
-Optional external scrape targets live in:
+Prometheus uses static scrape jobs for:
 
-- `prometheus/file_sd/patroni.yml`
-- `prometheus/file_sd/db-node-exporter.yml`
+- `postgres-exporter`
+- `patroni`
+- `db-node-exporter`
+- `gcs-backup-exporter`
+- `prometheus`
 
-These files are templates with no active targets by default. Add real targets in your local environment or deployment system.
+The checked-in Prometheus config keeps valid placeholder targets. The GCP VM compose file rewrites those non-secret target values from `.env` when Prometheus starts, so environment-specific IPs stay out of Git.
 
 ## Commands
 
 ```bash
-make up        # start local Prometheus, Grafana, Alertmanager, exporters
-make down      # stop the local stack
-make logs      # follow local stack logs
-make validate  # validate configs and dashboard JSON
+make up        # start Prometheus, Grafana, Alertmanager, and GCS exporter
+make down      # stop the stack
+make logs      # follow logs
+make ps        # list service state
+make restart   # restart services
+make validate  # validate required files, dashboard JSON, and Prometheus config when promtool is available
 ```
 
 ## Documentation
 
-See [docs/db-monitoring.md](docs/db-monitoring.md) for the monitoring model, dashboard guide, alert runbook notes, and future Kubernetes deployment path.
+- [GCP VM quickstart](docs/gcp-vm-quickstart.md)
+- [Database monitoring design and runbook](docs/db-monitoring.md)
+
+## Not Included Yet
+
+- backend service `/healthz`
+- backend service `/metrics`
+- kube-prometheus-stack
+- Loki or ELK logs
+- OpenTelemetry tracing
+- public Grafana exposure
+- HA Grafana or remote metric storage

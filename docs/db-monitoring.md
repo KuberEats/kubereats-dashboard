@@ -1,229 +1,138 @@
 # Kubereats Database Monitoring
 
-This repository currently focuses on database monitoring only. Kubereats depends on PostgreSQL for order, menu, and user data, so database availability, replication health, connection pressure, disk capacity, and backup freshness are the first operational signals to make visible.
-
-Backend service health checks, application metrics, tracing, frontend telemetry, and log aggregation are future work. Keeping this first stack database-only makes it useful before backend services expose `/metrics`.
-
-The primary monitoring stack is designed to run outside the Kubernetes application cluster, preferably on an independent GCP VM named `gcp-monitor-01`. This keeps the monitoring plane out of the application cluster failure domain and separate from the PostgreSQL nodes it observes.
+Kubereats depends on PostgreSQL for order, menu, merchant, and user data. Phase 1 monitoring focuses on database observability because DB degradation can become user-visible before backend application checks are mature. The goal is actionable operator signals, not a dump of every exported metric.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph MON[gcp-monitor-01]
-    PROM[Prometheus]
-    GRAF[Grafana]
-    AM[Alertmanager]
-    GBE[gcs-backup-exporter]
-  end
-  subgraph ONPREM[On-prem or private network]
-    DB[(PostgreSQL HA nodes)]
-    PE[postgres_exporter]
-    PAT[Patroni /metrics optional]
-    NE[node_exporter optional]
-  end
-  GCPDB[(GCP PostgreSQL node private IP)] --> PROM
-  DB --> PE
-  DB --> PAT
-  DB --> NE
-  PE --> PROM[Prometheus]
-  PAT --> PROM
-  NE --> PROM
-  GCS[(GCS backup bucket)] --> GBE
-  GBE --> PROM
-  PROM --> GRAF[Grafana]
-  PROM --> AM[Alertmanager]
-  GCM[Google Cloud Monitoring later] -. uptime checks .-> MON
-```
+The monitoring stack runs on the GCP monitoring VM at `10.250.0.4`, outside the Kubernetes application cluster:
 
-## Components
+- Prometheus scrapes metrics and evaluates alert rules.
+- Grafana reads Prometheus through a provisioned datasource and loads dashboard JSON from Git.
+- Alertmanager receives Prometheus alerts. Notification receivers are intentionally deployment-specific placeholders.
+- `postgres_exporter` should run on each PostgreSQL node and expose database metrics on `:9187`.
+- Patroni metrics are scraped from each DB node on `:8008` when `/metrics` is available.
+- node_exporter should run on each DB node and expose host metrics on `:9100`.
+- `gcs-backup-exporter` runs beside Prometheus and checks the configured GCS backup bucket and prefix.
 
-- Prometheus scrapes exporters and evaluates database alert rules.
-- `postgres_exporter` connects to PostgreSQL and exposes database metrics.
-- Patroni metrics are optional and only work when the Patroni API exposes `/metrics`.
-- `node_exporter` is optional and useful when database nodes are external VMs.
-- `gcs-backup-exporter` checks the configured GCS bucket and prefix for the latest backup object.
-- Grafana provisions the Prometheus datasource and dashboard JSON files automatically.
-- Alertmanager is wired as the alert receiver, with notification routes left as a deployment-specific task.
+The current lab DB nodes from the IaC repo are `pg1` at `192.168.16.221`, `pg2` at `192.168.16.222`, and `pg3` at `10.250.0.3`. Keep these values in the monitoring VM `.env`; do not commit environment-specific runtime files.
 
-The stack supports scraping PostgreSQL nodes over private network or VPN, scraping GCP-hosted PostgreSQL nodes by private IP, checking GCS backup freshness, and later integrating Google Cloud Monitoring for GCS, GCE, and uptime checks.
+## Why Outside Kubernetes
 
-## Failure Domain Design
+This stack intentionally runs outside Kubernetes for Phase 1. If Kubernetes is unhealthy, operators still need a view of PostgreSQL health, Patroni leadership, DB node disk pressure, and backup freshness. Keeping the monitoring plane on `10.250.0.4` avoids putting the database observability path in the same failure domain as the application workloads.
 
-The primary Prometheus, Grafana, Alertmanager, and backup freshness exporter should run on `gcp-monitor-01`, outside the Kubernetes application cluster. This is intentional: if the Kubernetes cluster fails, the monitoring plane should still be able to show database state, backup freshness, and external node availability.
+## Why Grafana Is Not HA Yet
 
-If the on-prem site fails, Prometheus on `gcp-monitor-01` should continue running and should show scrape failures, PostgreSQL unreachability, replication impact, or site-level alerts depending on which targets are unreachable. Alertmanager grouping by `cluster` and `site` helps collapse many related symptoms into a smaller incident view.
+Grafana is not HA in this phase because the priority is establishing repeatable monitoring-as-code and useful DB dashboards. A single Grafana instance with provisioned dashboards is acceptable for the first production-like setup. The known risk is that the monitoring VM is a single point of failure; Git-backed configuration makes restoration straightforward. HA Grafana, remote metric storage, and standby monitoring VMs are future work.
 
-If Kubernetes fails, this database monitoring stack should remain available because it is not deployed inside the application cluster. Operators should still be able to open Grafana on `gcp-monitor-01`, inspect PostgreSQL status, and decide whether the database is healthy while application workloads are unavailable.
+## Why DB Monitoring Comes Before Backend Health Checks
 
-If the monitoring VM fails, Prometheus and Grafana from this stack are unavailable until the VM is recovered or restored. This is the main accepted risk in the first phase. Keep the VM simple, document restore steps, and back up configuration through Git. A later phase can add a standby monitoring VM or remote metric storage.
+The backend services do not yet expose application `/metrics` or a full health model. Database signals are already operationally meaningful: exporter reachability, `pg_up`, connection pressure, replication lag, deadlocks, Patroni leader state, disk usage, and backup freshness all indicate risk before customers see failed orders or login issues.
 
-Google Cloud Monitoring uptime checks can monitor the monitoring VM itself from outside the VM. Recommended checks include Prometheus `/-/ready` on port `9090`, Grafana `/api/health` on port `3000`, and Alertmanager `/-/ready` on port `9093`, exposed only through approved firewall rules or an internal load balancer as appropriate. Google Cloud Monitoring can also cover GCE VM uptime, disk, GCS bucket-level signals, and synthetic checks that are outside Prometheus' own failure domain.
+## Component Flow
+
+Prometheus scrapes static targets for `postgres-exporter`, `patroni`, `db-node-exporter`, `gcs-backup-exporter`, and itself. Grafana uses the provisioned `Prometheus` datasource at `http://prometheus:9090`. Dashboards are loaded from `/var/lib/grafana/dashboards`. Alert rules live under `prometheus/rules/` and are sent to Alertmanager at `http://alertmanager:9093`.
+
+The GCS backup exporter uses Google Application Default Credentials. The monitoring VM service account needs:
+
+- `storage.objects.list`
+- `storage.objects.get` if backup object metadata access requires it
+
+The exporter exposes:
+
+- `kubereats_gcs_backup_last_check_success`
+- `kubereats_gcs_backup_latest_object_timestamp_seconds`
+- `kubereats_gcs_backup_latest_object_age_seconds`
+- `kubereats_gcs_backup_objects_total`
+- `kubereats_gcs_backup_max_age_seconds`
 
 ## False Positive Reduction
 
-Alerts use `warning`, `critical`, and occasional `info` severities. Warnings indicate conditions that need investigation before they become outages. Critical alerts indicate likely user-impacting database availability, backup freshness, or HA failures.
+Alerts use sustained `for:` windows so one missed scrape does not become a critical incident. Exporter scrape failures wait 5 minutes. Connection pressure, disk pressure, replication lag, stale backups, and backup exporter failures wait 10 minutes. Critical alerts are reserved for likely service impact: PostgreSQL down, no Patroni leader, and stale backups beyond the configured backup SLO.
 
-Most alerts use a `for:` duration so short scrape glitches do not page immediately. Examples include 5 minutes for exporter scrape failures, 10 minutes for high connection usage, and 10 minutes for stale GCS backup state.
+Labels are deliberately low-cardinality: `env`, `cluster`, `component`, and `node`. Avoid labels based on SQL text, client address, pod name, request ID, or object path.
 
-Alertmanager groups alerts by `alertname`, `cluster`, `site`, and `node`. The `site` label should be added to file service discovery targets when a deployment has on-prem and GCP sites, for example `site: onprem-tpe` or `site: gcp-asia-east1`. Grouping by site makes network partitions and site failures easier to read.
+## Warning Vs Critical
 
-Inhibition rules are prepared for a future site-level alert named `KubereatsSiteUnreachable`. When that critical alert is firing for a `cluster` and `site`, lower-severity warning and info alerts from the same site can be inhibited to avoid alert storms. The site-level alert itself should come from blackbox probing, VPN tunnel checks, or Google Cloud Monitoring integration in a later phase.
+Use `warning` when an operator should investigate before users are likely impacted, such as exporter down, high connection usage, replication lag, deadlocks, disk usage above 85%, or backup exporter check failures.
 
-Use Alertmanager silences for planned maintenance such as PostgreSQL failover drills, VM patching, backup tooling upgrades, or VPN maintenance. Prefer time-bounded silences scoped by `cluster`, `site`, `node`, or exact alert names.
+Use `critical` when service impact is likely or data durability is at risk: PostgreSQL reports down, Patroni has no leader, or the latest backup is older than the configured max age.
 
-Default thresholds are conservative. They are intended to avoid noisy alerts in a student cloud-native project while still catching important database risks: sustained exporter failure, PostgreSQL down, connection pressure above 80 percent, replication lag above 64 MiB, disk usage above 85 percent, and backup age above 26 hours.
+## Runbook Notes
+
+### Alert KubereatsPostgresExporterDown
+
+Prometheus cannot scrape `postgres_exporter`. Check whether the exporter package or service is installed, whether it listens on `:9187`, whether the monitoring VM can reach the DB node, and whether host firewalls allow the path.
+
+### Alert KubereatsPostgresDown
+
+`postgres_exporter` is reachable but `pg_up=0`. Check PostgreSQL process status, local exporter credentials, PostgreSQL port access, and Patroni state on that node.
+
+### Alert KubereatsPostgresConnectionsHigh
+
+Connection usage is above 80% of `max_connections`. Check backend connection pools, stuck sessions, idle-in-transaction sessions, and recent traffic changes.
+
+### Alert KubereatsPostgresReplicationLagHigh
+
+Replication lag is above 64 MiB for 10 minutes. Check replica health, WAL receiver status, network latency, disk pressure, and whether Patroni has recently failed over.
+
+### Alert KubereatsPostgresDeadlocksDetected
+
+Deadlocks increased. Review recent write paths, transaction ordering, lock waits, and application retries.
+
+### Alert KubereatsPatroniNoLeader
+
+No Patroni target reports a leader. Check Patroni API reachability, etcd/DCS health, node clocks, and quorum. Do not force promotion without understanding quorum and data loss risk.
+
+### Alert KubereatsDbDiskUsageHigh
+
+A DB node filesystem is above 85% usage. Check data volume, WAL growth, logs, pgBackRest retention, and filesystem mount points.
+
+### Alert KubereatsGcsBackupTooOld
+
+The latest observed GCS backup object is older than `GCS_BACKUP_MAX_AGE_HOURS`. Check pgBackRest timers, recent backup job logs, GCS bucket and prefix values, IAM permissions, and whether the expected primary or backup host is running jobs.
+
+### Alert KubereatsGcsBackupExporterFailed
+
+The exporter is running but could not complete its latest GCS check. Check Application Default Credentials, VM service account IAM, bucket name, prefix, and outbound network access.
+
+## If The On-Prem Site Is Down
+
+The monitoring VM in GCP should remain reachable. Expect `pg1` and `pg2` scrape targets to fail if they are on-prem. Use Grafana to confirm whether `pg3` is still up and whether Patroni/etcd quorum can safely elect a leader. The current two-on-prem, one-GCP DB topology may not auto-promote with a full on-prem outage because the remaining GCP node alone lacks quorum.
+
+## If Kubernetes Is Down
+
+Keep using the monitoring VM. This stack is intentionally outside Kubernetes and should still show DB, backup, and node-exporter state. Treat application errors separately from database health until backend metrics are implemented.
+
+## If The Monitoring VM Is Down
+
+Prometheus, Grafana, and Alertmanager from this stack are unavailable until `10.250.0.4` is restored. Recreate the VM, install Docker/Git, clone this repo, restore `.env` from operational records, and run `make up`. Add external uptime checks in a future phase to detect monitoring-plane failure.
 
 ## PostgreSQL Exporter User
 
-Create a least-privilege monitoring user. Use a generated password from your secret manager, not the placeholder shown here.
+Use a low-privilege monitoring user and keep the password in a secret manager or host-local config, never in Git:
 
 ```sql
 CREATE USER postgres_exporter WITH PASSWORD 'CHANGE_ME';
 GRANT pg_monitor TO postgres_exporter;
 ```
 
-Use a DSN like:
+For the current IaC role, `prometheus-postgres-exporter` is installed on DB nodes only when `monitoring_enabled` is true. Confirm the role is using a safe credential before enabling it broadly.
 
-```text
-postgresql://postgres_exporter:CHANGE_ME@db-node-1.example.internal:5432/postgres?sslmode=require
-```
+## Dashboards
 
-For local lab environments, `sslmode=disable` can be acceptable. For production, prefer TLS.
+The provisioned dashboards are intentionally small:
 
-## Run Locally
-
-```bash
-cp .env.example .env
-make up
-```
-
-Open:
-
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000
-- Alertmanager: http://localhost:9093
-
-The example `.env` contains placeholders. `postgres_exporter` containers may start while PostgreSQL targets are unreachable until real DSNs are configured.
-
-## Configure `.env`
-
-Set:
-
-- `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD`
-- `KUBEREATS_ENV`
-- `KUBEREATS_DB_CLUSTER`
-- `PG_NODE_1_DSN`, `PG_NODE_2_DSN`, and `PG_NODE_3_DSN`
-- `GCS_BACKUP_BUCKET`, `GCS_BACKUP_PREFIX`, and `GCS_BACKUP_MAX_AGE_HOURS`
-- `GOOGLE_APPLICATION_CREDENTIALS` only when mounting a local credential file for the GCS exporter
-
-Do not commit `.env`, service account keys, real database passwords, private IPs, or private hostnames.
-
-Optional Patroni and node exporter targets are configured through Prometheus file service discovery:
-
-- `prometheus/file_sd/patroni.yml`
-- `prometheus/file_sd/db-node-exporter.yml`
-
-These files are empty by default. In a real environment, generate or mount deployment-specific versions.
-
-## Verify Prometheus Targets
-
-In Prometheus, open **Status > Targets** and check:
-
-- `postgres-exporter`: one target per configured DB node
-- `patroni`: optional targets if file service discovery is populated
-- `db-node-exporter`: optional targets if file service discovery is populated
-- `gcs-backup-exporter`: backup freshness exporter
-
-For config validation:
-
-```bash
-make validate
-```
-
-## Grafana Dashboards
-
-Grafana loads dashboards from `grafana/dashboards` into the `Kubereats Database` folder.
-
-`Kubereats PostgreSQL Overview` shows PostgreSQL up/down state, connection pressure, transaction rates, activity states, database size, locks, deadlocks, and exporter scrape status.
-
-`Kubereats PostgreSQL HA` shows Patroni leader state when available, replication lag, WAL activity, primary/replica signals, failover-related changes, and node availability.
-
-`Kubereats GCS Backup` shows latest backup age, freshness status, exporter success, object count under the backup prefix, latest observed object timestamp, and the 26-hour backup SLO.
-
-## Alerts
-
-### Alert KubereatsPostgresExporterDown
-
-Prometheus cannot scrape `postgres_exporter`. Check the exporter container, network path, and DSN.
-
-### Alert KubereatsPostgresDown
-
-`postgres_exporter` is reachable, but PostgreSQL reports `pg_up=0`. Check PostgreSQL process health, credentials, port access, and host availability.
-
-### Alert KubereatsPostgresConnectionsHigh
-
-Connection usage is above 80 percent of `max_connections`. Check application connection pools, stuck sessions, and whether pool limits match database capacity.
-
-### Alert KubereatsPostgresIdleInTransactionHigh
-
-More than five sessions are idle in transaction. Identify sessions holding locks and review transaction handling.
-
-### Alert KubereatsPostgresReplicationLagHigh
-
-Replication lag is above 64 MiB. Check replica health, WAL receiver status, disk pressure, and network latency.
-
-### Alert KubereatsPostgresDeadlocksDetected
-
-Deadlocks increased recently. Review recent write paths and transaction ordering.
-
-### Alert KubereatsPostgresDatabaseGrowthHigh
-
-Projected growth is above 10 GiB per day. Check ingestion changes, indexes, table bloat, and retention.
-
-### Alert KubereatsDbDiskUsageHigh
-
-A database node filesystem is above 85 percent used. Check data volume, WAL volume, logs, and backup retention.
-
-### Alert KubereatsPatroniNoLeader
-
-No Patroni target reports itself as leader. Check Patroni API reachability, DCS health, and cluster election status.
-
-### Alert KubereatsGcsBackupTooOld
-
-The latest observed backup object is older than the configured max age. Check backup jobs, pgBackRest logs, GCS permissions, and object prefix.
-
-### Alert KubereatsGcsBackupExporterFailed
-
-The exporter process is running but its latest GCS check failed. Check ADC credentials, bucket name, prefix, and network access.
-
-## Known Limitations
-
-- External DB node discovery is template-based in this repo and should be generated or mounted per environment.
-- Patroni metric names can vary by version; dashboard panels and alerts may need adjustment after target verification.
-- PostgreSQL replication lag metric names can vary with exporter version and custom queries.
-- Alertmanager notification receivers are intentionally placeholders.
-- The local stack does not create PostgreSQL or Patroni nodes.
-
-## Kubernetes Monitoring Later
-
-Do not deploy the primary database Prometheus/Grafana stack inside Kubernetes in this phase. Database monitoring should remain available even when the Kubernetes application cluster is unavailable.
-
-A later Kubernetes monitoring add-on may use:
-
-- `kube-prometheus-stack`
-- `ServiceMonitor` for in-cluster application and Kubernetes exporters
-- separate `additionalScrapeConfigs` if Kubernetes Prometheus needs a limited view of external dependencies
-- Grafana dashboard ConfigMaps for Kubernetes and application dashboards
-- Kubernetes Secrets, External Secrets, or Workload Identity for credentials
-
-That future in-cluster stack should complement `gcp-monitor-01`, not replace it for database monitoring. Do not store GCP service account keys in Git. Prefer Workload Identity on GKE when possible.
+- `Kubereats PostgreSQL Overview`: PostgreSQL up/down, exporter scrape status, active/max connections, transaction rate, locks/deadlocks, and database size.
+- `Kubereats PostgreSQL HA`: Patroni leader state, replication lag, primary/replica signals, WAL activity, and node availability.
+- `Kubereats GCS Backup`: latest backup age, freshness status, object count, latest object timestamp, exporter success, and the 26-hour backup SLO.
 
 ## Future Work
 
-- backend `/metrics`
-- application health checks
+- backend service `/metrics`
+- backend service `/healthz`
+- kube-prometheus-stack for Kubernetes-native monitoring
+- Grafana MCP-assisted dashboard iteration
+- Google Cloud Monitoring uptime checks
 - Loki or ELK logs
 - OpenTelemetry tracing
-- Kubernetes `ServiceMonitor` integration
-- Grafana MCP-assisted dashboard iteration
+- HA monitoring VM or remote metric storage
