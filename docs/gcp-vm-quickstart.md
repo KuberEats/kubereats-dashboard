@@ -93,3 +93,29 @@ curl -s http://127.0.0.1:9090/api/v1/targets \
 ```
 
 DB targets can remain `down` until `postgres_exporter`, Patroni metrics, node exporter, and network firewall rules are in place on the DB nodes.
+
+## DB Exporter Access
+
+Current lab DB nodes:
+
+```text
+pg1 192.168.16.221
+pg2 192.168.16.222
+pg3 10.250.0.3
+```
+
+Access DB nodes from the jump host as `kubereats`:
+
+```bash
+ssh kubereats@192.168.16.221
+ssh kubereats@192.168.16.222
+ssh kubereats@10.250.0.3
+```
+
+Exporter ports:
+
+- node_exporter: `9100`
+- postgres_exporter: `9187`
+- Patroni: `8008`
+
+`node_exporter` is installed on `pg1`, `pg2`, and `pg3`. Restrict TCP/9100 to the monitoring VM source IP `10.250.0.4`; do not allow exporter ports from `0.0.0.0/0`. `postgres_exporter` requires a low-privilege PostgreSQL monitoring user and a host-local systemd environment file; do not store its DSN or password in Git.

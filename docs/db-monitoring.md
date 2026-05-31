@@ -16,6 +16,22 @@ The monitoring stack runs on the GCP monitoring VM at `10.250.0.4`, outside the 
 
 The current lab DB nodes from the IaC repo are `pg1` at `192.168.16.221`, `pg2` at `192.168.16.222`, and `pg3` at `10.250.0.3`. Keep these values in the monitoring VM `.env`; do not commit environment-specific runtime files.
 
+DB node SSH access is through the `kubereats` user:
+
+```bash
+ssh kubereats@192.168.16.221
+ssh kubereats@192.168.16.222
+ssh kubereats@10.250.0.3
+```
+
+Exporter ports:
+
+- node_exporter: `9100`
+- postgres_exporter: `9187`
+- Patroni metrics/API: `8008`
+
+Restrict DB exporter access to the monitoring VM source IP `10.250.0.4`. Do not open exporter ports to `0.0.0.0/0`.
+
 ## Why Outside Kubernetes
 
 This stack intentionally runs outside Kubernetes for Phase 1. If Kubernetes is unhealthy, operators still need a view of PostgreSQL health, Patroni leadership, DB node disk pressure, and backup freshness. Keeping the monitoring plane on `10.250.0.4` avoids putting the database observability path in the same failure domain as the application workloads.
@@ -86,6 +102,16 @@ No Patroni target reports a leader. Check Patroni API reachability, etcd/DCS hea
 ### Alert KubereatsDbDiskUsageHigh
 
 A DB node filesystem is above 85% usage. Check data volume, WAL growth, logs, pgBackRest retention, and filesystem mount points.
+
+As of the initial DB node exporter rollout, `node_exporter` is installed as a systemd service on `pg1`, `pg2`, and `pg3`. Host-level firewall rules should allow local loopback checks and `10.250.0.4/32` to TCP/9100, then drop other TCP/9100 sources. If Prometheus still reports a node exporter target down, test from the monitoring VM first:
+
+```bash
+curl -fsS http://192.168.16.221:9100/metrics | head
+curl -fsS http://192.168.16.222:9100/metrics | head
+curl -fsS http://10.250.0.3:9100/metrics | head
+```
+
+If `pg3` times out from `10.250.0.4` while local checks on `pg3` succeed, check the GCP VPC firewall or route between `10.250.0.4` and `10.250.0.3`. The firewall rule should be restricted to source `10.250.0.4/32` and TCP/9100 for node_exporter. Patroni on `pg3` uses TCP/8008 and may need a similarly restricted rule if central Prometheus should scrape it.
 
 ### Alert KubereatsGcsBackupTooOld
 
