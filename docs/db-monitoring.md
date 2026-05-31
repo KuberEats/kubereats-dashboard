@@ -113,6 +113,8 @@ curl -fsS http://10.250.0.3:9100/metrics | head
 
 If `pg3` times out from `10.250.0.4` while local checks on `pg3` succeed, check the GCP VPC firewall or route between `10.250.0.4` and `10.250.0.3`. The firewall rule should be restricted to source `10.250.0.4/32` and TCP/9100 for node_exporter. Patroni on `pg3` uses TCP/8008 and may need a similarly restricted rule if central Prometheus should scrape it.
 
+When the central monitoring VM cannot reach `pg3` directly, the Kubernetes-local Prometheus can provide a secondary observation path. The Kubernetes stack exposes Prometheus on private NodePort `30990` on the Kubernetes node network, and central Prometheus federates only selected `pg3` Patroni and node_exporter metrics from `/federate`. Keep this private; do not expose the NodePort on a public interface.
+
 ### Alert KubereatsGcsBackupTooOld
 
 The latest observed GCS backup object is older than `GCS_BACKUP_MAX_AGE_HOURS`. Check pgBackRest timers, recent backup job logs, GCS bucket and prefix values, IAM permissions, and whether the expected primary or backup host is running jobs.

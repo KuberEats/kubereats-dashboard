@@ -108,3 +108,18 @@ scrape_configs:
           cluster: kubereats-postgres
           component: backup
           node: gcs-backup-exporter
+
+  - job_name: k8s-prometheus-federate-pg3
+    honor_labels: true
+    metrics_path: /federate
+    params:
+      'match[]':
+        - '{job=~"patroni|db-node-exporter",node="pg3"}'
+    static_configs:
+      - targets:
+          - 192.168.17.11:30990
+        labels:
+          env: dev
+          cluster: kubereats-postgres
+          component: k8s-prometheus-federation
+          node: k8s-cp-01
