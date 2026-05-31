@@ -115,6 +115,9 @@ scrape_configs:
     params:
       'match[]':
         - '{job=~"patroni|db-node-exporter",node="pg3"}'
+    metric_relabel_configs:
+      - target_label: source
+        replacement: k8s-local
     static_configs:
       - targets:
           - 192.168.17.11:30990
