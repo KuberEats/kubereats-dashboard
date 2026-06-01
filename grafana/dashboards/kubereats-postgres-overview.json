@@ -85,8 +85,8 @@
       "pluginVersion": "11.3.1",
       "targets": [
         {
-          "expr": "pg_up{job=\"postgres-exporter\"}",
-          "legendFormat": "{{node}}",
+          "expr": "pg_up{job=\"postgres-exporter\",node!=\"pg3\"} or pg_up{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} {{source}}",
           "refId": "A"
         }
       ],
@@ -124,12 +124,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (node) (pg_stat_activity_count{datname!~\"template.*\"})",
+          "expr": "sum by (node) (pg_stat_activity_count{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"}) or sum by (node) (pg_stat_activity_count{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"})",
           "legendFormat": "{{node}} current",
           "refId": "A"
         },
         {
-          "expr": "max by (node) (pg_settings_max_connections)",
+          "expr": "max by (node) (pg_settings_max_connections{job=\"postgres-exporter\",node!=\"pg3\"}) or max by (node) (pg_settings_max_connections{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"})",
           "legendFormat": "{{node}} max",
           "refId": "B"
         }
@@ -168,12 +168,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (node) (rate(pg_stat_database_xact_commit{datname!~\"template.*\"}[5m]))",
+          "expr": "sum by (node) (rate(pg_stat_database_xact_commit{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"}[5m])) or sum by (node) (rate(pg_stat_database_xact_commit{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"}[5m]))",
           "legendFormat": "{{node}} commits",
           "refId": "A"
         },
         {
-          "expr": "sum by (node) (rate(pg_stat_database_xact_rollback{datname!~\"template.*\"}[5m]))",
+          "expr": "sum by (node) (rate(pg_stat_database_xact_rollback{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"}[5m])) or sum by (node) (rate(pg_stat_database_xact_rollback{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"}[5m]))",
           "legendFormat": "{{node}} rollbacks",
           "refId": "B"
         }
@@ -212,7 +212,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (node, state) (pg_stat_activity_count{datname!~\"template.*\"})",
+          "expr": "sum by (node, state) (pg_stat_activity_count{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"}) or sum by (node, state) (pg_stat_activity_count{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"})",
           "legendFormat": "{{node}} {{state}}",
           "refId": "A"
         }
@@ -251,7 +251,7 @@
       },
       "targets": [
         {
-          "expr": "pg_database_size_bytes{datname!~\"template.*\"}",
+          "expr": "pg_database_size_bytes{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"} or pg_database_size_bytes{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"}",
           "legendFormat": "{{node}} {{datname}}",
           "refId": "A"
         }
@@ -290,12 +290,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (node) (pg_locks_count)",
+          "expr": "sum by (node) (pg_locks_count{job=\"postgres-exporter\",node!=\"pg3\"}) or sum by (node) (pg_locks_count{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"})",
           "legendFormat": "{{node}} locks",
           "refId": "A"
         },
         {
-          "expr": "sum by (node) (increase(pg_stat_database_deadlocks{datname!~\"template.*\"}[5m]))",
+          "expr": "sum by (node) (increase(pg_stat_database_deadlocks{job=\"postgres-exporter\",node!=\"pg3\",datname!~\"template.*\"}[5m])) or sum by (node) (increase(pg_stat_database_deadlocks{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\",datname!~\"template.*\"}[5m]))",
           "legendFormat": "{{node}} deadlocks",
           "refId": "B"
         }
@@ -367,12 +367,12 @@
       "pluginVersion": "11.3.1",
       "targets": [
         {
-          "expr": "up{job=\"postgres-exporter\"}",
-          "legendFormat": "{{node}} exporter",
+          "expr": "up{job=\"postgres-exporter\",node!=\"pg3\"} or up{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} {{source}} exporter",
           "refId": "A"
         }
       ],
-      "title": "Exporter Scrape Status",
+      "title": "Postgres Exporter Status (Direct + pg3 K8s)",
       "type": "stat"
     }
   ],
@@ -393,6 +393,6 @@
   "timezone": "browser",
   "title": "Kubereats PostgreSQL Overview",
   "uid": "kubereats-postgres-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

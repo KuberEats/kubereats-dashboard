@@ -85,8 +85,8 @@
       "pluginVersion": "11.3.1",
       "targets": [
         {
-          "expr": "patroni_master{job=\"patroni\"}",
-          "legendFormat": "{{node}}",
+          "expr": "patroni_primary{job=\"patroni\",node!=\"pg3\"} or patroni_primary{job=\"patroni\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} {{source}}",
           "refId": "A"
         }
       ],
@@ -100,7 +100,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -124,8 +124,8 @@
       },
       "targets": [
         {
-          "expr": "pg_replication_lag",
-          "legendFormat": "{{node}}",
+          "expr": "pg_replication_lag_seconds{job=\"postgres-exporter\",node!=\"pg3\"} or pg_replication_lag_seconds{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} {{source}} lag",
           "refId": "A"
         }
       ],
@@ -139,7 +139,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "Bps"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -163,12 +163,12 @@
       },
       "targets": [
         {
-          "expr": "rate(pg_stat_wal_wal_bytes[5m])",
-          "legendFormat": "{{node}} WAL bytes",
+          "expr": "pg_wal_size_bytes{job=\"postgres-exporter\",node!=\"pg3\"} or pg_wal_size_bytes{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} {{source}} WAL size",
           "refId": "A"
         }
       ],
-      "title": "WAL Activity",
+      "title": "WAL Size",
       "type": "timeseries"
     },
     {
@@ -202,8 +202,8 @@
       },
       "targets": [
         {
-          "expr": "pg_replication_is_replica",
-          "legendFormat": "{{node}} replica={{replica}}",
+          "expr": "pg_replication_is_replica{job=\"postgres-exporter\",node!=\"pg3\"} or pg_replication_is_replica{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{node}} replica={{replica}} {{source}}",
           "refId": "A"
         }
       ],
@@ -241,13 +241,13 @@
       },
       "targets": [
         {
-          "expr": "changes(patroni_master{job=\"patroni\"}[1h])",
-          "legendFormat": "{{node}} leader changes",
+          "expr": "changes(patroni_primary{job=\"patroni\",node!=\"pg3\"}[1h]) or changes(patroni_primary{job=\"patroni\",node=\"pg3\",source=\"k8s-local\"}[1h])",
+          "legendFormat": "{{node}} {{source}} leader changes",
           "refId": "A"
         },
         {
-          "expr": "changes(pg_up{job=\"postgres-exporter\"}[1h])",
-          "legendFormat": "{{node}} pg_up changes",
+          "expr": "changes(pg_up{job=\"postgres-exporter\",node!=\"pg3\"}[1h]) or changes(pg_up{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"}[1h])",
+          "legendFormat": "{{node}} {{source}} pg_up changes",
           "refId": "B"
         }
       ],
@@ -318,12 +318,12 @@
       "pluginVersion": "11.3.1",
       "targets": [
         {
-          "expr": "up{job=~\"postgres-exporter|patroni|db-node-exporter\"}",
-          "legendFormat": "{{job}} {{node}}",
+          "expr": "up{job=~\"postgres-exporter|patroni|db-node-exporter\",node!=\"pg3\"} or up{job=\"postgres-exporter\",node=\"pg3\",source=\"k8s-local\"} or up{job=\"patroni\",node=\"pg3\",source=\"k8s-local\"} or up{job=\"db-node-exporter\",node=\"pg3\",source=\"k8s-local\"}",
+          "legendFormat": "{{job}} {{node}} {{source}}",
           "refId": "A"
         }
       ],
-      "title": "Node Availability",
+      "title": "Node Availability (Direct + pg3 K8s)",
       "type": "stat"
     }
   ],
@@ -345,6 +345,6 @@
   "timezone": "browser",
   "title": "Kubereats PostgreSQL HA",
   "uid": "kubereats-postgres-ha",
-  "version": 1,
+  "version": 4,
   "weekStart": ""
 }
