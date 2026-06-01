@@ -85,6 +85,7 @@ make validate  # validate required files, dashboard JSON, and Prometheus config 
 - [Kubernetes monitoring](docs/k8s-monitoring.md)
 - [ArgoCD monitoring](docs/argocd-monitoring.md)
 - [Platform services monitoring](docs/platform-services-monitoring.md)
+- [Merchant Service monitoring](docs/merchant-service-monitoring.md)
 
 ## Not Included Yet
 

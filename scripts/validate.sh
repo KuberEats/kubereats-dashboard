@@ -23,11 +23,13 @@ required_files=(
   grafana/dashboards/kubereats-k8s-workload-health.json
   grafana/dashboards/kubereats-argocd-overview.json
   grafana/dashboards/kubereats-platform-services.json
+  grafana/dashboards/kubereats-merchant-service-metrics.json
   exporters/gcs-backup-exporter/exporter.py
   exporters/gcs-backup-exporter/Dockerfile
   exporters/gcs-backup-exporter/requirements.txt
   docs/db-monitoring.md
   docs/gcp-vm-quickstart.md
+  docs/merchant-service-monitoring.md
 )
 
 for file in "${required_files[@]}"; do
@@ -47,6 +49,7 @@ python3 -m json.tool grafana/dashboards/kubereats-k8s-node-overview.json >/dev/n
 python3 -m json.tool grafana/dashboards/kubereats-k8s-workload-health.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-argocd-overview.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-platform-services.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-merchant-service-metrics.json >/dev/null
 
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}"
 PROMETHEUS_VOLUME="$(pwd)/prometheus:/etc/prometheus:ro"
