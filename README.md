@@ -86,6 +86,7 @@ make validate  # validate required files, dashboard JSON, and Prometheus config 
 - [ArgoCD monitoring](docs/argocd-monitoring.md)
 - [Platform services monitoring](docs/platform-services-monitoring.md)
 - [Merchant Service monitoring](docs/merchant-service-monitoring.md)
+- [Private Grafana access](docs/private-grafana-access.md)
 
 ## Not Included Yet
 
