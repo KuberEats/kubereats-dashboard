@@ -82,6 +82,9 @@ make validate  # validate required files, dashboard JSON, and Prometheus config 
 - [GCP VM quickstart](docs/gcp-vm-quickstart.md)
 - [Database monitoring design and runbook](docs/db-monitoring.md)
 - [GCP Load Balancer, HA VPN, and Cloud Router monitoring](docs/gcp-lb-vpn-monitoring.md)
+- [Kubernetes monitoring](docs/k8s-monitoring.md)
+- [ArgoCD monitoring](docs/argocd-monitoring.md)
+- [Platform services monitoring](docs/platform-services-monitoring.md)
 
 ## Not Included Yet
 

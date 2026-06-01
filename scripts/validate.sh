@@ -11,12 +11,18 @@ required_files=(
   alertmanager/alertmanager.yml
   grafana/provisioning/datasources/prometheus.yml
   grafana/provisioning/datasources/google-cloud-monitoring.yml
+  grafana/provisioning/datasources/kubernetes-prometheus.yml
   grafana/provisioning/dashboards/dashboards.yml
   grafana/dashboards/kubereats-postgres-overview.json
   grafana/dashboards/kubereats-postgres-ha.json
   grafana/dashboards/kubereats-backup-gcs.json
   grafana/dashboards/kubereats-gcp-load-balancer-overview.json
   grafana/dashboards/kubereats-gcp-vpn-router-overview.json
+  grafana/dashboards/kubereats-k8s-cluster-overview.json
+  grafana/dashboards/kubereats-k8s-node-overview.json
+  grafana/dashboards/kubereats-k8s-workload-health.json
+  grafana/dashboards/kubereats-argocd-overview.json
+  grafana/dashboards/kubereats-platform-services.json
   exporters/gcs-backup-exporter/exporter.py
   exporters/gcs-backup-exporter/Dockerfile
   exporters/gcs-backup-exporter/requirements.txt
@@ -36,6 +42,11 @@ python3 -m json.tool grafana/dashboards/kubereats-postgres-ha.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-backup-gcs.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-gcp-load-balancer-overview.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-gcp-vpn-router-overview.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-k8s-cluster-overview.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-k8s-node-overview.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-k8s-workload-health.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-argocd-overview.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-platform-services.json >/dev/null
 
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}"
 PROMETHEUS_VOLUME="$(pwd)/prometheus:/etc/prometheus:ro"

@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: Kubernetes Prometheus
+    uid: kubernetes-prometheus
+    type: prometheus
+    access: proxy
+    url: ${K8S_PROMETHEUS_URL}
+    isDefault: false
+    editable: true

@@ -1,0 +1,345 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Unavailable Deployment Replicas",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_deployment_status_replicas_unavailable",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{namespace}}/{{deployment}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "CrashLoopBackOff Pods",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"}",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Restart Count by Namespace/Pod",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "sum by (namespace,pod) (increase(kube_pod_container_status_restarts_total[30m]))",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{namespace}}/{{pod}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Pending Pods",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_pod_status_phase{phase=\"Pending\"} == 1",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Failed Pods",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_pod_status_phase{phase=\"Failed\"} == 1",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "OOMKilled Containers",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "sum by (namespace,pod,container) (increase(kube_pod_container_status_last_terminated_reason{reason=\"OOMKilled\"}[6h]))",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{namespace}}/{{pod}}/{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "HPA Current vs Desired",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "kubernetes-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas",
+          "instant": false,
+          "range": true,
+          "legendFormat": "current {{namespace}}/{{horizontalpodautoscaler}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "kubernetes-prometheus"
+          },
+          "expr": "kube_horizontalpodautoscaler_status_desired_replicas",
+          "instant": false,
+          "range": true,
+          "legendFormat": "desired {{namespace}}/{{horizontalpodautoscaler}}",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "kubereats",
+    "kubernetes",
+    "workloads"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Kubereats K8s Workload Health",
+  "uid": "kubereats-k8s-workload-health",
+  "version": 1,
+  "weekStart": ""
+}
