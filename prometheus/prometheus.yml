@@ -126,3 +126,21 @@ scrape_configs:
           cluster: kubereats-postgres
           component: k8s-prometheus-federation
           node: k8s-cp-01
+
+  - job_name: k8s-prometheus-federate-backend-autoscaling
+    honor_labels: true
+    metrics_path: /federate
+    params:
+      'match[]':
+        - '{namespace="kubereats-dev",__name__=~"kube_horizontalpodautoscaler_.*|kube_deployment_spec_replicas|kube_deployment_status_replicas.*|kube_pod_container_status_restarts_total|kube_pod_container_status_waiting_reason|container_cpu_usage_seconds_total|container_memory_working_set_bytes|merchant_.*|committee_merchant_.*|order_consumer_.*|up"}'
+    metric_relabel_configs:
+      - target_label: source
+        replacement: k8s-local
+    static_configs:
+      - targets:
+          - 192.168.17.11:30990
+        labels:
+          env: dev
+          cluster: kubereats-k8s
+          component: backend-autoscaling
+          node: k8s-cp-01

@@ -1,10 +1,8 @@
 # Kubereats Dashboard
 
-Monitoring-as-code for Kubereats database observability.
+Monitoring-as-code for Kubereats database, Kubernetes, backend autoscaling, and platform observability.
 
-This repository is the source of truth for the first production-like monitoring stack on the GCP monitoring VM at `10.250.0.4`. The phase-1 stack runs outside Kubernetes and focuses on database signals: PostgreSQL exporter metrics, Patroni availability, DB node exporter metrics, GCS backup freshness, Prometheus alerting, and Grafana dashboards.
-
-Backend application `/healthz`, backend `/metrics`, Kubernetes monitoring, tracing, and log aggregation are intentionally not included yet.
+This repository is the source of truth for the first production-like monitoring stack on the GCP monitoring VM at `10.250.0.4`. The stack runs outside Kubernetes and covers database signals, Kubernetes signals, backend service metrics, autoscaling state, Prometheus alerting, and Grafana dashboards.
 
 ## Quick Start
 
@@ -62,6 +60,7 @@ Prometheus uses static scrape jobs for:
 - `patroni`
 - `db-node-exporter`
 - `gcs-backup-exporter`
+- `k8s-prometheus-federate-backend-autoscaling`
 - `prometheus`
 
 The checked-in Prometheus config keeps valid placeholder targets. The GCP VM compose file rewrites those non-secret target values from `.env` when Prometheus starts, so environment-specific IPs stay out of Git.
@@ -86,13 +85,11 @@ make validate  # validate required files, dashboard JSON, and Prometheus config 
 - [ArgoCD monitoring](docs/argocd-monitoring.md)
 - [Platform services monitoring](docs/platform-services-monitoring.md)
 - [Merchant Service monitoring](docs/merchant-service-monitoring.md)
+- [Backend autoscaling monitoring](docs/backend-autoscaling-monitoring.md)
 - [Private Grafana access](docs/private-grafana-access.md)
 
 ## Not Included Yet
 
-- backend service `/healthz`
-- backend service `/metrics`
-- kube-prometheus-stack
 - Loki or ELK logs
 - OpenTelemetry tracing
 - public Grafana exposure
