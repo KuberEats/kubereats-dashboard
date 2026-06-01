@@ -1,0 +1,290 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bool_on_off"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MIN",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "vpn.googleapis.com/tunnel_established",
+          "perSeriesAligner": "ALIGN_NEXT_OLDER",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "VPN Tunnel Established",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bool_on_off"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MIN",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "router.googleapis.com/bgp/session_up",
+          "perSeriesAligner": "ALIGN_NEXT_OLDER",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "Cloud Router BGP Session Up",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "vpn.googleapis.com/network/sent_bytes_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        },
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "vpn.googleapis.com/network/received_bytes_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "B"
+        }
+      ],
+      "title": "VPN Tunnel Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "vpn.googleapis.com/network/dropped_sent_packets_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        },
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "vpn.googleapis.com/network/dropped_received_packets_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "B"
+        }
+      ],
+      "title": "VPN Dropped Packets",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "router.googleapis.com/bgp/received_routes_count",
+          "perSeriesAligner": "ALIGN_MEAN",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        },
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "router.googleapis.com/bgp/sent_routes_count",
+          "perSeriesAligner": "ALIGN_MEAN",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "B"
+        }
+      ],
+      "title": "BGP Routes Sent and Received",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "kubereats",
+    "gcp",
+    "vpn",
+    "router"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "project-7e4d63c9-6a51-487b-866",
+          "value": "project-7e4d63c9-6a51-487b-866"
+        },
+        "hide": 0,
+        "label": "GCP Project",
+        "name": "gcp_project",
+        "options": [
+          {
+            "selected": true,
+            "text": "project-7e4d63c9-6a51-487b-866",
+            "value": "project-7e4d63c9-6a51-487b-866"
+          }
+        ],
+        "query": "project-7e4d63c9-6a51-487b-866",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Kubereats GCP HA VPN and Cloud Router Overview",
+  "uid": "kubereats-gcp-vpn-router-overview",
+  "version": 1,
+  "weekStart": ""
+}

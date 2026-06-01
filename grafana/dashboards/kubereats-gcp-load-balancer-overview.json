@@ -1,0 +1,230 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "groupBys": [
+            "metric.label.response_code_class"
+          ],
+          "metricType": "loadbalancing.googleapis.com/https/request_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTPS Request Rate by Response Class",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MEAN",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "loadbalancing.googleapis.com/https/backend_latencies",
+          "perSeriesAligner": "ALIGN_PERCENTILE_95",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend Latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_MEAN",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "loadbalancing.googleapis.com/https/total_latencies",
+          "perSeriesAligner": "ALIGN_PERCENTILE_95",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Latency p95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "stackdriver",
+        "uid": "google-cloud-monitoring"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "loadbalancing.googleapis.com/https/request_bytes_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "A"
+        },
+        {
+          "alignmentPeriod": "60s",
+          "crossSeriesReducer": "REDUCE_SUM",
+          "datasource": {
+            "type": "stackdriver",
+            "uid": "google-cloud-monitoring"
+          },
+          "metricType": "loadbalancing.googleapis.com/https/response_bytes_count",
+          "perSeriesAligner": "ALIGN_RATE",
+          "projectName": "$gcp_project",
+          "queryType": "metrics",
+          "refId": "B"
+        }
+      ],
+      "title": "Request and Response Throughput",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "kubereats",
+    "gcp",
+    "load-balancer"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "project-7e4d63c9-6a51-487b-866",
+          "value": "project-7e4d63c9-6a51-487b-866"
+        },
+        "hide": 0,
+        "label": "GCP Project",
+        "name": "gcp_project",
+        "options": [
+          {
+            "selected": true,
+            "text": "project-7e4d63c9-6a51-487b-866",
+            "value": "project-7e4d63c9-6a51-487b-866"
+          }
+        ],
+        "query": "project-7e4d63c9-6a51-487b-866",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Kubereats GCP Load Balancer Overview",
+  "uid": "kubereats-gcp-lb-overview",
+  "version": 1,
+  "weekStart": ""
+}

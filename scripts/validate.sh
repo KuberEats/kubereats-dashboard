@@ -10,10 +10,13 @@ required_files=(
   prometheus/rules/postgres-alerts.yml
   alertmanager/alertmanager.yml
   grafana/provisioning/datasources/prometheus.yml
+  grafana/provisioning/datasources/google-cloud-monitoring.yml
   grafana/provisioning/dashboards/dashboards.yml
   grafana/dashboards/kubereats-postgres-overview.json
   grafana/dashboards/kubereats-postgres-ha.json
   grafana/dashboards/kubereats-backup-gcs.json
+  grafana/dashboards/kubereats-gcp-load-balancer-overview.json
+  grafana/dashboards/kubereats-gcp-vpn-router-overview.json
   exporters/gcs-backup-exporter/exporter.py
   exporters/gcs-backup-exporter/Dockerfile
   exporters/gcs-backup-exporter/requirements.txt
@@ -31,6 +34,8 @@ done
 python3 -m json.tool grafana/dashboards/kubereats-postgres-overview.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-postgres-ha.json >/dev/null
 python3 -m json.tool grafana/dashboards/kubereats-backup-gcs.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-gcp-load-balancer-overview.json >/dev/null
+python3 -m json.tool grafana/dashboards/kubereats-gcp-vpn-router-overview.json >/dev/null
 
 PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}"
 PROMETHEUS_VOLUME="$(pwd)/prometheus:/etc/prometheus:ro"
